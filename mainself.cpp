@@ -1,5 +1,11 @@
 #include "std_lib_facilities.h"
 
+const char NUMBER = 'N';
+const char QUIT = 'q';
+const char ENDPRINT = ';';
+const string PROMPT = "> ";
+const string RESULT = "= ";
+
 
 
 class Token{
@@ -19,8 +25,9 @@ private:
 public:
 	Token get();
 	void putback(Token t);
+	void ignore(char c);
 	Token_stream()
-		: full(false), buffer(0) {}
+		: full(false), buffer(0) {} //buffer(0)의 의미
 };
 
 Token Token_stream::get() {
@@ -37,7 +44,7 @@ Token Token_stream::get() {
 			cin.putback(c);
 			double d;
 			cin >> d;
-			return Token('N', d);   // 핵심. class에서 public으로 선언하지 않으면 Token에 값을 대입할 수 없다.
+			return Token(NUMBER, d);   // 핵심. class에서 public으로 선언하지 않으면 Token에 값을 대입할 수 없다.
 		case '(': case ')': case '+': case '-': case '*': case '/': case';': case'q':
 			return Token(c);
 		default:
@@ -53,6 +60,18 @@ void Token_stream::putback(Token t) {
 		buffer = t;
 		full = true;
 	}
+}
+
+void Token_stream::ignore(char c) {
+	if (full && c == buffer.kind) {
+		full = false;
+		return;
+	}
+	full = false;
+
+	char ch = 0;
+	while (cin >> ch)
+		if (ch == c) return;
 }
 
 Token_stream ts = Token_stream();
@@ -91,7 +110,7 @@ double term() {
 		case '/': 
 			left /= primary();
 			break;
-		default: // *을 만날 때  혹은 하위 계층 만날 때  primary = > 띄어쓰기가 있다는 것.
+		default:                    // *을 만날 때  혹은 하위 계층 만날 때  primary = > 띄어쓰기가 있다는 것.
 			ts.putback(t);
 			return left;
 		}
@@ -110,7 +129,7 @@ double primary() {
 		return t2;
 	}
 		
-	case 'N':
+	case NUMBER:
 		return t.value;
 	default:
 		error("You should input 'number' or '(expression) first.'");
@@ -118,15 +137,32 @@ double primary() {
 
 }
 
-int main() try{
-	while (cin) {
+
+
+void clean_up_mess() {
+	ts.ignore(ENDPRINT);
+}
+
+void calculate() {
+	while (cin) try{
+		cout << PROMPT;
 		Token t = ts.get();
-		while(t.kind == ';') t = ts.get();
-		if (t.kind == 'q') break;
+		while (t.kind == ENDPRINT) t = ts.get();
+		if (t.kind == QUIT) return;
 		ts.putback(t);
-		cout << "= " << expression() << endl;
+		cout << RESULT << expression() << endl;
+	}
+	catch (exception& e) {
+		cout << e.what() << endl;
+		clean_up_mess();
 	}
 }
-catch(exception &e) {
-	cout << e.what() << endl;
+
+int main() try {
+	calculate();
+	return 0;
+}
+catch (...) {
+	cerr << "exceprion \n";
+	return 2;
 }
